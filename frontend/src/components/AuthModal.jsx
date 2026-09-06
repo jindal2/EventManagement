@@ -11,8 +11,7 @@ function AuthModal({ isOpen, setIsOpen }) {
   });
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const [otp, setOtp] = useState("");
-  const [otpStep, setOtpStep] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
 
@@ -21,6 +20,7 @@ function AuthModal({ isOpen, setIsOpen }) {
   const toggleMode = () => {
     setIsSignup(!isSignup);
     setError("");
+    setSuccess("");
   };
 
   const handleChange = (e) =>
@@ -30,85 +30,138 @@ function AuthModal({ isOpen, setIsOpen }) {
     e.preventDefault();
     setError("");
     setSuccess("");
-  
+    setLoading(true);
+
     const url = isSignup
       ? "http://localhost:5000/api/auth/register"
       : "http://localhost:5000/api/auth/login";
-  
+
     try {
-      const payload = !isSignup
-        ? otpStep
-          ? { email: formData.email, password: formData.password, otp }
-          : { email: formData.email, password: formData.password }
-        : formData;
-  
+      const payload = isSignup
+        ? formData
+        : { email: formData.email, password: formData.password };
+
       const response = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-  
+
       const data = await response.json();
-  
       if (!response.ok) throw new Error(data.msg || "Something went wrong");
-  
-      if (!isSignup && data.step === "OTP_REQUIRED") {
-        setOtpStep(true);
-        return; 
-      }
 
       if (!isSignup) {
         if (data.token) localStorage.setItem("token", data.token);
-  
         const role = data.role || formData.role;
         localStorage.setItem("role", role);
-  
         setIsOpen(false);
-  
         if (role === "student") navigate("/student");
         else if (role === "organizer") navigate("/organizer");
-  
-        console.log(`Logged in as ${role}`);
-      } 
-      
-      else {
-        setSuccess("Signup successful! Please log in now.");
+      } else {
+        setSuccess("Account created! Please log in.");
         setIsSignup(false);
-        setFormData({ ...formData, password: "" });
+        setFormData({ ...formData, password: "", name: "" });
       }
-  
     } catch (err) {
       setError(err.message);
+    } finally {
+      setLoading(false);
     }
   };
-  
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
-      <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(8px)" }}
+    >
+      {/* Card */}
+      <div
+        className="fade-in relative w-full max-w-md mx-4 rounded-2xl p-8 shadow-2xl"
+        style={{
+          background: "linear-gradient(145deg, #1e2535, #161b27)",
+          border: "1px solid rgba(255,255,255,0.08)",
+        }}
+      >
+        {/* Close */}
         <button
           onClick={() => setIsOpen(false)}
-          className="absolute top-4 right-4 text-white font-bold text-xl"
+          style={{
+            position: "absolute", top: 16, right: 16,
+            background: "rgba(255,255,255,0.07)",
+            border: "none", color: "#94a3b8",
+            width: 32, height: 32, borderRadius: "50%",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 16, padding: 0,
+            cursor: "pointer", transition: "all 0.2s",
+          }}
+          onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.14)"}
+          onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,0.07)"}
         >
           ✕
         </button>
 
-        <h2 className="text-center text-2xl font-semibold mb-2 text-black">
-          {isSignup ? "Sign Up" : "Log In"}
-        </h2>
-        <p className="text-center text-gray-500 text-sm mb-6">
-          {isSignup
-            ? "Just a few details to get started."
-            : "Enter your credentials to log in."}
-        </p>
+        {/* Logo accent */}
+        <div style={{ textAlign: "center", marginBottom: 24 }}>
+          <div style={{
+            display: "inline-flex", alignItems: "center", justifyContent: "center",
+            width: 52, height: 52, borderRadius: 14,
+            background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+            fontSize: 22, marginBottom: 12,
+          }}>🎪</div>
+          <h2 style={{ margin: 0, fontSize: 24, fontWeight: 700, color: "#f1f5f9" }}>
+            {isSignup ? "Create Account" : "Welcome Back"}
+          </h2>
+          <p style={{ margin: "6px 0 0", fontSize: 14, color: "#64748b" }}>
+            {isSignup ? "Join the campus event community" : "Sign in to your account"}
+          </p>
+        </div>
 
-        {error && <p className="text-red-500 text-center mb-2">{error}</p>}
-        {success && <p className="text-green-500 text-center mb-2">{success}</p>}
+        {/* Tab switcher */}
+        <div style={{
+          display: "flex", background: "rgba(255,255,255,0.04)",
+          borderRadius: 10, padding: 4, marginBottom: 24,
+          border: "1px solid rgba(255,255,255,0.06)",
+        }}>
+          {["Sign Up", "Log In"].map((tab, i) => {
+            const active = (i === 0 && isSignup) || (i === 1 && !isSignup);
+            return (
+              <button
+                key={tab}
+                onClick={() => { setIsSignup(i === 0); setError(""); setSuccess(""); }}
+                style={{
+                  flex: 1, padding: "8px 0", border: "none",
+                  borderRadius: 8, fontSize: 14, fontWeight: 600,
+                  cursor: "pointer", transition: "all 0.2s",
+                  background: active ? "linear-gradient(135deg, #6366f1, #8b5cf6)" : "transparent",
+                  color: active ? "#fff" : "#64748b",
+                }}
+              >
+                {tab}
+              </button>
+            );
+          })}
+        </div>
 
-        <form className="space-y-4" onSubmit={handleSubmit}>
+        {/* Messages */}
+        {error && (
+          <div style={{
+            background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)",
+            borderRadius: 8, padding: "10px 14px", marginBottom: 16,
+            color: "#f87171", fontSize: 14,
+          }}>⚠️ {error}</div>
+        )}
+        {success && (
+          <div style={{
+            background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.3)",
+            borderRadius: 8, padding: "10px 14px", marginBottom: 16,
+            color: "#34d399", fontSize: 14,
+          }}>✅ {success}</div>
+        )}
+
+        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           {isSignup && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#94a3b8", marginBottom: 6 }}>
                 Full Name
               </label>
               <input
@@ -117,93 +170,82 @@ function AuthModal({ isOpen, setIsOpen }) {
                 placeholder="Enter your full name"
                 value={formData.name}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg text-black placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-black"
                 required
+                style={inputStyle}
               />
             </div>
           )}
 
           {isSignup && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#94a3b8", marginBottom: 6 }}>
                 Role
               </label>
               <select
                 name="role"
                 value={formData.role}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg text-black focus:outline-none focus:ring-2 focus:ring-black"
+                style={inputStyle}
               >
-                <option value="student">Student</option>
-                <option value="organizer">Organizer</option>
+                <option value="student">🎓 Student</option>
+                <option value="organizer">🎪 Organizer</option>
               </select>
             </div>
           )}
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Email
+            <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#94a3b8", marginBottom: 6 }}>
+              Email Address
             </label>
             <input
               type="email"
               name="email"
-              placeholder="Enter your email"
+              placeholder="your@email.com"
               value={formData.email}
               onChange={handleChange}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg text-black placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-black"
               required
+              style={inputStyle}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#94a3b8", marginBottom: 6 }}>
               Password
             </label>
             <input
               type="password"
               name="password"
-              placeholder="Enter your password"
+              placeholder="••••••••"
               value={formData.password}
               onChange={handleChange}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg text-black placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-black"
               required
+              style={inputStyle}
             />
           </div>
 
-          {!isSignup && otpStep && (
-  <div>
-    <label className="block text-sm font-medium text-gray-700 mb-1">
-      OTP
-    </label>
-    <input
-      type="text"
-      placeholder="Enter OTP"
-      value={otp}
-      onChange={(e) => setOtp(e.target.value)}
-      className="w-full px-4 py-2 border border-gray-300 rounded-lg text-black"
-      required
-    />
-  </div>
-)}
-
-
           <button
             type="submit"
-            className="w-full py-2 text-white bg-black rounded-lg hover:bg-gray-900 transition"
+            disabled={loading}
+            style={{
+              marginTop: 4, padding: "12px 0", border: "none", borderRadius: 10,
+              background: loading ? "#334155" : "linear-gradient(135deg, #6366f1, #8b5cf6)",
+              color: "#fff", fontSize: 15, fontWeight: 600, cursor: loading ? "not-allowed" : "pointer",
+              transition: "all 0.2s", letterSpacing: 0.3,
+            }}
           >
-            {isSignup ? "Sign Up" : "Log In"}
+            {loading ? "Please wait..." : (isSignup ? "Create Account →" : "Sign In →")}
           </button>
         </form>
-
-        <p className="text-center text-gray-600 text-sm mt-4">
-          {isSignup ? "Already have an account?" : "New here?"}{" "}
-          <button onClick={toggleMode} className="text-white font-medium ml-1">
-            {isSignup ? "Log In" : "Sign Up"}
-          </button>
-        </p>
       </div>
     </div>
   );
 }
+
+const inputStyle = {
+  width: "100%", padding: "10px 14px", border: "1px solid rgba(255,255,255,0.08)",
+  borderRadius: 8, background: "rgba(255,255,255,0.04)", color: "#f1f5f9",
+  fontSize: 14, outline: "none", transition: "border-color 0.2s",
+  fontFamily: "Inter, sans-serif", boxSizing: "border-box",
+};
 
 export default AuthModal;
