@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 const API = "http://localhost:5000";
 
@@ -15,24 +15,28 @@ const EyeIcon = ({ open }) => (
 
 export default function ResetPassword() {
   const navigate = useNavigate();
-  const [token,    setToken]    = useState("");
-  const [email,    setEmail]    = useState("");
+  const [searchParams] = useSearchParams();          // ← React Router, always correct
+
+  const token = searchParams.get("token") || "";
+  const email = searchParams.get("email") || "";
+  const invalid = !token || !email;
+
   const [password, setPassword] = useState("");
   const [confirm,  setConfirm]  = useState("");
   const [showPass, setShowPass] = useState(false);
   const [showConf, setShowConf] = useState(false);
-  const [error,    setError]    = useState("");
-  const [success,  setSuccess]  = useState(false);
-  const [busy,     setBusy]     = useState(false);
-  const [invalid,  setInvalid]  = useState(false);
+  const [f1, setF1] = useState(false);
+  const [f2, setF2] = useState(false);
+  const [error,   setError]   = useState("");
+  const [success, setSuccess] = useState(false);
+  const [busy,    setBusy]    = useState(false);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const t = params.get("token");
-    const e = params.get("email");
-    if (!t || !e) { setInvalid(true); return; }
-    setToken(t); setEmail(e);
-  }, []);
+    if (success) {
+      const t = setTimeout(() => navigate("/"), 2500);
+      return () => clearTimeout(t);
+    }
+  }, [success, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -42,15 +46,18 @@ export default function ResetPassword() {
     setBusy(true);
     try {
       const res  = await fetch(`${API}/api/auth/reset-password`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, token, newPassword: password }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.msg);
       setSuccess(true);
-      setTimeout(() => navigate("/"), 2500);
-    } catch (err) { setError(err.message); }
-    finally { setBusy(false); }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
   };
 
   const inp = (focused) => ({
@@ -61,8 +68,6 @@ export default function ResetPassword() {
     color: "#f1f5f9", fontSize: 14, outline: "none",
     fontFamily: "'Inter',sans-serif", boxSizing: "border-box", transition: "all 0.2s",
   });
-  const [f1, setF1] = useState(false);
-  const [f2, setF2] = useState(false);
 
   return (
     <div style={{
@@ -79,71 +84,109 @@ export default function ResetPassword() {
       }}>
         {/* Logo */}
         <div style={{ textAlign: "center", marginBottom: 28 }}>
-          <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 52, height: 52, borderRadius: 15, background: "linear-gradient(135deg,#6366f1,#8b5cf6)", fontSize: 24, marginBottom: 14, boxShadow: "0 8px 24px rgba(99,102,241,0.4)" }}>🎪</div>
+          <div style={{
+            display: "inline-flex", alignItems: "center", justifyContent: "center",
+            width: 52, height: 52, borderRadius: 15,
+            background: "linear-gradient(135deg,#6366f1,#8b5cf6)",
+            fontSize: 24, marginBottom: 14,
+            boxShadow: "0 8px 24px rgba(99,102,241,0.4)",
+          }}>🎪</div>
           <h2 style={{ margin: "0 0 6px", fontSize: 22, fontWeight: 800, color: "#f1f5f9", letterSpacing: "-0.02em" }}>
-            {success ? "Password Updated!" : invalid ? "Invalid Link" : "Set New Password"}
+            {success ? "Password Updated! ✅" : invalid ? "Invalid Link ⚠️" : "Set New Password"}
           </h2>
           <p style={{ margin: 0, fontSize: 13, color: "#64748b" }}>
-            {success ? "Redirecting you to login…"
+            {success  ? "Redirecting you to login…"
              : invalid ? "This reset link is invalid or has expired."
-             : `Resetting password for ${email}`}
+             : `Setting new password for ${email}`}
           </p>
         </div>
 
+        {/* ── INVALID ── */}
         {invalid && (
           <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 40, marginBottom: 16 }}>⚠️</div>
-            <p style={{ color: "#64748b", fontSize: 14, marginBottom: 24 }}>
-              Please request a new password reset link from the login page.
+            <p style={{ color: "#64748b", fontSize: 14, marginBottom: 24, lineHeight: 1.6 }}>
+              Please go back and request a new password reset link.
             </p>
-            <button onClick={() => navigate("/")} style={{ padding: "12px 28px", border: "none", borderRadius: 10, background: "linear-gradient(135deg,#6366f1,#8b5cf6)", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
+            <button onClick={() => navigate("/")}
+              style={{ padding: "12px 28px", border: "none", borderRadius: 10, background: "linear-gradient(135deg,#6366f1,#8b5cf6)", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
               Go to Login
             </button>
           </div>
         )}
 
+        {/* ── SUCCESS ── */}
         {success && (
           <div style={{ textAlign: "center" }}>
-            <div style={{ width: 72, height: 72, borderRadius: "50%", background: "rgba(16,185,129,0.12)", border: "2px solid rgba(16,185,129,0.35)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32, margin: "0 auto 24px" }}>✅</div>
-            <p style={{ color: "#94a3b8", fontSize: 14, lineHeight: 1.7 }}>Your password has been reset successfully.<br />Taking you to login…</p>
+            <div style={{ width: 72, height: 72, borderRadius: "50%", background: "rgba(16,185,129,0.12)", border: "2px solid rgba(16,185,129,0.35)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32, margin: "0 auto 20px" }}>✅</div>
+            <p style={{ color: "#94a3b8", fontSize: 14, lineHeight: 1.7, margin: "0 0 20px" }}>
+              Your password has been reset successfully.<br/>Taking you to login in a moment…
+            </p>
+            <button onClick={() => navigate("/")}
+              style={{ padding: "12px 28px", border: "none", borderRadius: 10, background: "linear-gradient(135deg,#6366f1,#8b5cf6)", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
+              Go to Login Now
+            </button>
           </div>
         )}
 
+        {/* ── FORM ── */}
         {!invalid && !success && (
           <>
             {error && (
-              <div style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 10, padding: "10px 14px", marginBottom: 14, color: "#fca5a5", fontSize: 13, display: "flex", gap: 8 }}>
+              <div style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 10, padding: "10px 14px", marginBottom: 16, color: "#fca5a5", fontSize: 13, display: "flex", gap: 8 }}>
                 <span>⚠️</span><span>{error}</span>
               </div>
             )}
+
             <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+
+              {/* New password */}
               <div>
-                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#64748b", marginBottom: 6, letterSpacing: "0.06em", textTransform: "uppercase" }}>New Password</label>
+                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#64748b", marginBottom: 6, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                  New Password
+                </label>
                 <div style={{ position: "relative" }}>
-                  <input type={showPass ? "text" : "password"} placeholder="Min. 6 characters"
-                    value={password} onChange={e => setPassword(e.target.value)} required
+                  <input
+                    type={showPass ? "text" : "password"}
+                    placeholder="Min. 6 characters"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    required
                     style={{ ...inp(f1), paddingRight: 42 }}
-                    onFocus={() => setF1(true)} onBlur={() => setF1(false)} />
+                    onFocus={() => setF1(true)}
+                    onBlur={() => setF1(false)}
+                  />
                   <button type="button" onClick={() => setShowPass(p => !p)}
-                    style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "#475569", cursor: "pointer", display: "flex", padding: 0 }}>
+                    style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "#475569", cursor: "pointer", display: "flex", padding: 0 }}
+                    onMouseEnter={e => e.currentTarget.style.color = "#94a3b8"}
+                    onMouseLeave={e => e.currentTarget.style.color = "#475569"}>
                     <EyeIcon open={showPass} />
                   </button>
                 </div>
               </div>
 
+              {/* Confirm password */}
               <div>
-                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#64748b", marginBottom: 6, letterSpacing: "0.06em", textTransform: "uppercase" }}>Confirm Password</label>
+                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#64748b", marginBottom: 6, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                  Confirm Password
+                </label>
                 <div style={{ position: "relative" }}>
-                  <input type={showConf ? "text" : "password"} placeholder="Repeat password"
-                    value={confirm} onChange={e => setConfirm(e.target.value)} required
+                  <input
+                    type={showConf ? "text" : "password"}
+                    placeholder="Repeat your new password"
+                    value={confirm}
+                    onChange={e => setConfirm(e.target.value)}
+                    required
                     style={{ ...inp(f2), paddingRight: 42 }}
-                    onFocus={() => setF2(true)} onBlur={() => setF2(false)} />
+                    onFocus={() => setF2(true)}
+                    onBlur={() => setF2(false)}
+                  />
                   <button type="button" onClick={() => setShowConf(p => !p)}
-                    style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "#475569", cursor: "pointer", display: "flex", padding: 0 }}>
+                    style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "#475569", cursor: "pointer", display: "flex", padding: 0 }}
+                    onMouseEnter={e => e.currentTarget.style.color = "#94a3b8"}
+                    onMouseLeave={e => e.currentTarget.style.color = "#475569"}>
                     <EyeIcon open={showConf} />
                   </button>
                 </div>
-                {/* match indicator */}
                 {confirm.length > 0 && (
                   <p style={{ margin: "6px 0 0", fontSize: 12, color: password === confirm ? "#34d399" : "#f87171" }}>
                     {password === confirm ? "✓ Passwords match" : "✗ Passwords don't match"}
@@ -151,17 +194,22 @@ export default function ResetPassword() {
                 )}
               </div>
 
-              <button type="submit" disabled={busy} style={{
-                padding: "13px 0", border: "none", borderRadius: 11, width: "100%",
-                background: busy ? "rgba(99,102,241,0.4)" : "linear-gradient(135deg,#6366f1,#8b5cf6)",
-                color: "#fff", fontSize: 14, fontWeight: 700, cursor: busy ? "not-allowed" : "pointer",
-                fontFamily: "'Inter',sans-serif",
-                boxShadow: busy ? "none" : "0 4px 16px rgba(99,102,241,0.35)",
-                display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-                transition: "all 0.2s",
-              }}
+              <button
+                type="submit"
+                disabled={busy}
+                style={{
+                  padding: "13px 0", border: "none", borderRadius: 11, width: "100%",
+                  background: busy ? "rgba(99,102,241,0.4)" : "linear-gradient(135deg,#6366f1,#8b5cf6)",
+                  color: "#fff", fontSize: 14, fontWeight: 700,
+                  cursor: busy ? "not-allowed" : "pointer",
+                  fontFamily: "'Inter',sans-serif",
+                  boxShadow: busy ? "none" : "0 4px 16px rgba(99,102,241,0.35)",
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                  transition: "all 0.2s",
+                }}
                 onMouseEnter={e => { if (!busy) { e.currentTarget.style.transform = "translateY(-1px)"; e.currentTarget.style.boxShadow = "0 6px 24px rgba(99,102,241,0.5)"; }}}
-                onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; }}>
+                onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = busy ? "none" : "0 4px 16px rgba(99,102,241,0.35)"; }}
+              >
                 {busy
                   ? <><span style={{ width: 16, height: 16, border: "2px solid rgba(255,255,255,0.25)", borderTopColor: "#fff", borderRadius: "50%", display: "inline-block", animation: "spin 0.7s linear infinite" }} /> Updating…</>
                   : "Update Password →"
@@ -171,7 +219,7 @@ export default function ResetPassword() {
           </>
         )}
       </div>
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }

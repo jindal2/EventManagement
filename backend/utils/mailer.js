@@ -1,15 +1,18 @@
 import nodemailer from "nodemailer";
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
+/* Create transporter fresh each call so it always reads the current env values */
+const makeTransporter = () =>
+  nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
+  });
 
 /* ── OTP Signup Verification ── */
 export const sendOTPEmail = async (to, otp) => {
+  const transporter = makeTransporter();
   await transporter.sendMail({
     from: `"EventHub" <${process.env.EMAIL_USER}>`,
     to,
@@ -20,7 +23,7 @@ export const sendOTPEmail = async (to, otp) => {
       <body style="margin:0;padding:0;background:#0f1117;font-family:'Segoe UI',Arial,sans-serif;">
         <div style="max-width:480px;margin:40px auto;background:#1e2535;border-radius:16px;overflow:hidden;border:1px solid rgba(255,255,255,0.08);">
           <div style="background:linear-gradient(135deg,#6366f1,#8b5cf6);padding:28px 32px;">
-            <h1 style="margin:0;color:#fff;font-size:22px;font-weight:800;letter-spacing:-0.02em;">🎪 EventHub</h1>
+            <h1 style="margin:0;color:#fff;font-size:22px;font-weight:800;">🎪 EventHub</h1>
             <p style="margin:6px 0 0;color:rgba(255,255,255,0.8);font-size:14px;">Email Verification</p>
           </div>
           <div style="padding:32px;">
@@ -48,6 +51,7 @@ export const sendOTPEmail = async (to, otp) => {
 
 /* ── Forgot Password Reset Link ── */
 export const sendPasswordResetEmail = async (to, resetUrl) => {
+  const transporter = makeTransporter();
   await transporter.sendMail({
     from: `"EventHub" <${process.env.EMAIL_USER}>`,
     to,
@@ -58,7 +62,7 @@ export const sendPasswordResetEmail = async (to, resetUrl) => {
       <body style="margin:0;padding:0;background:#0f1117;font-family:'Segoe UI',Arial,sans-serif;">
         <div style="max-width:480px;margin:40px auto;background:#1e2535;border-radius:16px;overflow:hidden;border:1px solid rgba(255,255,255,0.08);">
           <div style="background:linear-gradient(135deg,#6366f1,#8b5cf6);padding:28px 32px;">
-            <h1 style="margin:0;color:#fff;font-size:22px;font-weight:800;letter-spacing:-0.02em;">🎪 EventHub</h1>
+            <h1 style="margin:0;color:#fff;font-size:22px;font-weight:800;">🎪 EventHub</h1>
             <p style="margin:6px 0 0;color:rgba(255,255,255,0.8);font-size:14px;">Password Reset Request</p>
           </div>
           <div style="padding:32px;">
@@ -66,7 +70,7 @@ export const sendPasswordResetEmail = async (to, resetUrl) => {
               We received a request to reset your password. Click the button below to set a new one.
             </p>
             <div style="text-align:center;margin-bottom:28px;">
-              <a href="${resetUrl}" style="display:inline-block;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;text-decoration:none;padding:14px 36px;border-radius:10px;font-size:15px;font-weight:700;letter-spacing:0.01em;">
+              <a href="${resetUrl}" style="display:inline-block;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;text-decoration:none;padding:14px 36px;border-radius:10px;font-size:15px;font-weight:700;">
                 Reset My Password
               </a>
             </div>
