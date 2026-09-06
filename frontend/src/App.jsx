@@ -4,10 +4,9 @@ import StudentDashboard from "./pages/StudentDashboard";
 import OrganizerDashboard from "./pages/OrganizerDashboard";
 import EventDetailPage from "./pages/EventDetailPage";
 import CreateEventPage from "./pages/CreateEventPage";
+import ResetPassword from "./pages/ResetPassword";
 
 function App() {
-  console.log("App rendering");
-
   return (
     <Router>
       <Routes>
@@ -16,6 +15,7 @@ function App() {
         <Route path="/organizer" element={<OrganizerDashboard />} />
         <Route path="/organizer/event/:id" element={<EventDetailPage />} />
         <Route path="/organizer/create-event" element={<CreateEventPage />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
       </Routes>
     </Router>
   );
